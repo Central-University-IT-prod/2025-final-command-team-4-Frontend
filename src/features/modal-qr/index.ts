@@ -1,0 +1,1 @@
+export { ModalQr } from './ui/ModalQr'

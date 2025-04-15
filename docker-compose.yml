@@ -1,0 +1,44 @@
+services:
+  traefik:
+    image: traefik:v3
+    restart: unless-stopped
+    ports:
+      - '80:80'
+      - '443:443'
+      - '8080:8080'
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - ./traefik/config:/etc/traefik
+      - ./traefik/certs:/etc/certs
+      - ./traefik/letsencrypt:/letsencrypt
+    command:
+      - '--api.insecure=true'
+      - '--entrypoints.web.address=:80'
+      - '--entrypoints.websecure.address=:443'
+      - '--providers.docker=true'
+      - '--providers.docker.network=web'
+      - '--certificatesresolvers.leresolver.acme.httpchallenge.entrypoint=web'
+      - '--certificatesresolvers.leresolver.acme.httpchallenge=true'
+      - '--certificatesresolvers.leresolver.acme.email=zethange@yandex.ru'
+      - '--certificatesresolvers.leresolver.acme.storage=/letsencrypt/acme.json'
+    networks:
+      - web
+
+  frontend:
+    image: REDACTED:5050/team-4/frontend:latest
+    restart: unless-stopped
+    labels:
+      - 'traefik.enable=true'
+      - 'traefik.http.routers.frontend.rule=Host(`prod-team-4-1u3kkm05.REDACTED`)'
+      - 'traefik.http.routers.frontend.entrypoints=web,websecure'
+      - 'traefik.http.services.frontend.loadbalancer.server.port=80'
+      - 'traefik.http.routers.frontend.tls.certresolver=leresolver'
+      - 'traefik.http.routers.frontend.middlewares=test-redirectscheme'
+      - 'traefik.http.middlewares.test-redirectscheme.redirectscheme.scheme=https'
+      - 'traefik.http.middlewares.test-redirectscheme.redirectscheme.permanent=true'
+    networks:
+      - web
+
+networks:
+  web:
+    external: true
